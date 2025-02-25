@@ -21,23 +21,23 @@ jobs:
 
     - name: Run isort
       run: |
-        isort --settings-path=config/make/setup-lint.cfg src
+        isort --settings-path=config/make/setup-lint.cfg primesocket
 
     - name: Run autoflake
       run: |
-        autoflake --remove-all-unused-imports --in-place --recursive src
+        autoflake --remove-all-unused-imports --in-place --recursive primesocket
 
     - name: Run autopep8
       run: |
-        autopep8 --in-place --recursive src
+        autopep8 --in-place --recursive primesocket
 
     - name: Run pylint
       run: |
-        pylint --rcfile=config/make/.pylintrc --recursive=y src
+        pylint --rcfile=config/make/.pylintrc --recursive=y primesocket
 
     - name: Run flake8
       run: |
-        flake8 --config=config/make/setup-lint.cfg src
+        flake8 --config=config/make/setup-lint.cfg primesocket
 
     - name: Set up Rust
       uses: actions-rs/toolchain@v1
