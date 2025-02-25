@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// This struct contains information about the status of the request,
 /// along with a range of numbers processed by the server. It can include
-/// a sieve (a list of primes) and the last number checked by the server.
+/// a sieve (a list of primes).
 ///
 /// # Fields
 ///
@@ -12,8 +12,6 @@ use serde::{Deserialize, Serialize};
 /// * `status` - A string indicating the status of the task (e.g., "in_progress", "completed").
 /// * `start` - The starting number in the range being processed (optional).
 /// * `end` - The ending number in the range being processed (optional).
-/// * `sieve` - An optional vector of bytes representing the sieve used for prime number identification.
-/// * `last_checked` - The last number that was checked for primality (optional).
 /// * `primes` - An optional vector containing the prime numbers identified so far.
 ///
 /// # Example
@@ -24,8 +22,6 @@ use serde::{Deserialize, Serialize};
 ///     status: "in_progress".to_string(),
 ///     start: Some(1),
 ///     end: Some(100),
-///     sieve: Some(vec![1, 0, 1, 1]),
-///     last_checked: Some(10),
 ///     primes: Some(vec![2, 3, 5, 7]),
 /// };
 /// ```
@@ -33,11 +29,9 @@ use serde::{Deserialize, Serialize};
 pub struct Response {
     pub task: String,
     pub status: String,
-    pub start: Option<u64>,
-    pub end: Option<u64>,
-    pub sieve: Option<Vec<u8>>,
-    pub last_checked: Option<u64>,
-    pub primes: Option<Vec<u64>>,
+    pub start: Option<u32>,
+    pub end: Option<u32>,
+    pub primes: Option<Vec<u32>>,
 }
 
 impl Response {
@@ -55,8 +49,6 @@ impl Response {
     ///     status: "success".to_string(),
     ///     start: Some(1),
     ///     end: Some(100),
-    ///     sieve: None,
-    ///     last_checked: None,
     ///     primes: Some(vec![2, 3, 5, 7]),
     /// };
     /// let json = response.to_json();
@@ -79,7 +71,7 @@ impl Response {
     /// # Example
     ///
     /// ```
-    /// let json = r#"{"task":"done", "status":"success", "start":1, "end":100, "sieve":null, "last_checked":null, "primes":[2,3,5,7]}"#;
+    /// let json = r#"{"task":"done", "status":"success", "start":1, "end":100, "primes":[2,3,5,7]}"#;
     /// let response = Response::from_json(json);
     /// ```
     pub fn from_json(json: &str) -> Option<Response> {
@@ -95,8 +87,8 @@ impl Response {
 /// # Fields
 ///
 /// * `task` - A string representing the type of task the client wants the server to perform.
-/// * `end` - An optional `u64` representing the end of the range for the task, if applicable.
-/// * `sieve` - An optional vector of bytes representing the sieve to be used for primality checks.
+/// * `end` - An optional `u32` representing the end of the range for the task, if applicable.
+/// * `primes` - An optional vector containing the prime numbers to be used for the task.
 ///
 /// # Example
 ///
@@ -104,14 +96,14 @@ impl Response {
 /// let request = Request {
 ///     task: "start_process".to_string(),
 ///     end: Some(100),
-///     sieve: Some(vec![1, 0, 1, 1]),
+///     primes: Some(vec![1, 0, 1, 1]),
 /// };
 /// ```
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Request {
     pub task: String,
-    pub end: Option<u64>,
-    pub sieve: Option<Vec<u8>>,
+    pub end: Option<u32>,
+    pub primes: Option<Vec<u32>>,
 }
 
 impl Request {
@@ -127,7 +119,7 @@ impl Request {
     /// let request = Request {
     ///     task: "start_process".to_string(),
     ///     end: None,
-    ///     sieve: None,
+    ///     primes: None,
     /// };
     /// let json = request.to_json();
     /// ```
@@ -149,7 +141,7 @@ impl Request {
     /// # Example
     ///
     /// ```
-    /// let json = r#"{"task":"start_process", "end":100, "sieve":null}"#;
+    /// let json = r#"{"task":"start_process", "end":100, "primes":null}"#;
     /// let request = Request::from_json(json);
     /// ```
     pub fn from_json(json: &str) -> Option<Request> {

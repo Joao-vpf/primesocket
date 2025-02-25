@@ -1,36 +1,54 @@
-"""
-Script for running multiple clients concurrently.
-
-This module spawns multiple threads, each executing a client that
-communicates with the server using UDP.
-"""
-import threading
-import time
-
-from client_sieve import run_sieve_simulation
-
-# Define o número de clientes concorrentes
-NUM_CLIENTS = 5
+import asyncio
+import primesocket_core
 
 
-def start_client():
-    """Function to start an individual client thread."""
-    run_sieve_simulation()
+async def run_client(ip: str, port: int, client_id: int):
+    """_summary_
+
+    Parameters
+    ----------
+    ip : str
+        _description_
+    port : int
+        _description_
+    client_id : int
+        _description_
+    """    
+    try:
+        print(f"Cliente {client_id} iniciando...")
+        primesocket_core.start_client(ip, port)
+        print(f"Cliente {client_id} finalizado.")
+    except Exception as e:
+        print(f"Erro no Cliente {client_id}: {e}")
+
+
+async def run_multiple_clients(ip: str, port: int, num_clients: int):
+    """_summary_
+
+    Parameters
+    ----------
+    ip : str
+        _description_
+    port : int
+        _description_
+    num_clients : int
+        _description_
+    """    
+    tasks = []
+    for client_id in range(1, num_clients + 1):
+        tasks.append(run_client(ip, port, client_id))
+    
+    # Aguarda todos os clientes completarem
+    await asyncio.gather(*tasks)
 
 
 if __name__ == "__main__":
-    print(f"🚀 Starting {NUM_CLIENTS} concurrent clients...")
-
-    threads = []
-
-    for _ in range(NUM_CLIENTS):
-        thread = threading.Thread(target=start_client)
-        threads.append(thread)
-        thread.start()
-        # Pequeno delay para não sobrecarregar o servidor de uma vez
-        time.sleep(0.5)
-
-    for thread in threads:
-        thread.join()
-
-    print("✅ All clients finished execution.")
+    """_summary_
+    """    
+    # IP e porta do servidor
+    server_ip = "127.0.0.1"
+    server_port = 8080
+    num_clients = 5  # Número de clientes para testar
+    
+    # Executando múltiplos clientes
+    asyncio.run(run_multiple_clients(server_ip, server_port, num_clients))

@@ -23,3 +23,13 @@ format: autoflake autopep8 isort
 check: flake8 pylint
 
 prepare-commit: autoflake autopep8 isort flake8 pylint
+
+#* Project Rules
+server:
+	python primesocket/main.py
+
+client:
+	python primesocket/client.py
+
+clients:
+	python primesocket/multiple_clients.py

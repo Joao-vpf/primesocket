@@ -1,50 +1,46 @@
-use std::sync::{Arc, RwLock};
+use std::fs::File;
+use std::io::{self, Write};
 
-/// Represents the state of the server for prime number computations.
+/// Represents the server state for prime number computations.
 ///
 /// The `ServerState` struct maintains the current range of numbers being processed,
 /// the status of the computation, and intermediate results using a sieve method.
 ///
 /// # Fields
 ///
-/// * `start` - The starting number of the range to be processed.
-/// * `end` - The ending number of the range to be processed.
+/// * `end` - The upper limit of the number range to be processed.
 /// * `step` - The step size used for processing the range.
 /// * `last_checked` - The last number that has been processed.
-/// * `sieve` - A vector representing the sieve used for prime number identification.
 /// * `primes` - A list of identified prime numbers.
-/// * `status` - The current status of the computation (e.g., `"processing"`, `"completed"`).
+/// * `status` - The current status of the computation (e.g., "processing", "completed").
 ///
 /// # Example
 ///
 /// ```rust
 /// let server_state = ServerState::new(0, 100, 10);
-/// assert_eq!(server_state.start, 0);
+/// assert_eq!(server_state.last_checked, 0);
 /// assert_eq!(server_state.end, 100);
 /// assert_eq!(server_state.status, "processing");
 /// ```
 #[derive(Clone, Debug)]
 pub struct ServerState {
-    pub start: u64,
-    pub end: u64,
-    pub step: u64,
-    pub last_checked: u64,
-    pub sieve: Vec<u8>,
-    pub primes: Vec<u64>,
+    pub end: u32,
+    pub step: u32,
+    pub last_checked: u32,
+    pub primes: Vec<u32>,
     pub status: String,
 }
 
 impl ServerState {
-    /// Creates a new `ServerState` instance.
+    /// Creates a new instance of `ServerState`.
     ///
     /// This function initializes the server state with the given range and step size.
-    /// The sieve is initialized as a vector of `1`s, representing all numbers as potentially prime.
-    /// The `last_checked` value starts at `0`, and the computation status is set to `"processing"`.
+    /// The `last_checked` value starts at `start`, and the computation status is set to "processing".
     ///
     /// # Arguments
     ///
     /// * `start` - The starting number of the range.
-    /// * `end` - The ending number of the range.
+    /// * `end` - The upper limit of the number range.
     /// * `step` - The step size for processing.
     ///
     /// # Returns
@@ -55,28 +51,47 @@ impl ServerState {
     ///
     /// ```rust
     /// let state = ServerState::new(0, 100, 10);
-    /// assert_eq!(state.start, 0);
+    /// assert_eq!(state.last_checked, 0);
     /// assert_eq!(state.end, 100);
     /// assert_eq!(state.status, "processing");
     /// ```
-    pub fn new(start: u64, end: u64, step: u64) -> ServerState {
+    pub fn new(start: u32, end: u32, step: u32) -> ServerState {
         ServerState {
-            start,
             end,
             step,
-            last_checked: 0,
-            sieve: vec![1; (end + 1) as usize],
-            primes: Vec::new(),
+            last_checked: start,
+            primes: {
+                let mut primes = Vec::with_capacity(10000);
+                primes.extend(vec![2, 3]);
+                primes
+            },
             status: String::from("processing"),
         }
     }
-}
 
-/// A type alias for a shared, thread-safe `ServerState`.
-///
-/// The `SharedServerState` uses `Arc<RwLock<ServerState>>`, allowing multiple threads
-/// to access and modify the server state safely.
-pub type SharedServerState = Arc<RwLock<ServerState>>;
+    /// Saves the list of identified prime numbers to a file.
+    ///
+    /// This function writes the contents of `primes` into a file named `primes.txt`.
+    /// Each prime number is written on a separate line.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `io::Result<()>` indicating whether the file was successfully created and written.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let state = ServerState::new(0, 100, 10);
+    /// state.save_primes_to_file().expect("Failed to save primes");
+    /// ```
+    pub fn save_primes_to_file(&self) -> io::Result<()> {
+        let mut file = File::create("primes.txt")?;
+        for prime in &self.primes {
+            writeln!(file, "{}", prime)?;
+        }
+        Ok(())
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -85,10 +100,10 @@ mod tests {
     /// Tests the creation of a `ServerState` instance.
     ///
     /// This test ensures that:
-    /// - The `start`, `end`, and `step` values are correctly assigned.
+    /// - The `end` and `step` values are correctly assigned.
     /// - The `last_checked` starts at `0`.
-    /// - The `sieve` is initialized with the correct size.
-    /// - The initial status is `"processing"`.
+    /// - The `primes` vector is initialized with values.
+    /// - The initial status is "processing".
     #[test]
     fn test_server_state_creation() {
         let start = 0;
@@ -97,11 +112,9 @@ mod tests {
 
         let server_state = ServerState::new(start, end, step);
 
-        assert_eq!(server_state.start, 0);
         assert_eq!(server_state.end, 100);
         assert_eq!(server_state.step, 10);
-        assert_eq!(server_state.last_checked, 0);
-        assert_eq!(server_state.sieve.len(), (end + 1) as usize);
+        assert!(!server_state.primes.is_empty());
         assert_eq!(server_state.status, "processing");
     }
 }
