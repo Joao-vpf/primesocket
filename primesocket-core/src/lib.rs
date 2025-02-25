@@ -2,8 +2,8 @@ pub mod client;
 pub mod server;
 pub mod utils;
 
-use crate::server::server::start_server;
 use crate::client::client::start_client;
+use crate::server::server::start_server;
 
 use pyo3::prelude::*;
 

@@ -30,11 +30,7 @@ use tokio::runtime::Runtime;
 /// primesocket_core.start_server(8080, end=1000)
 /// ```
 #[pyfunction(signature = (port, end=None, verbose=None))]
-pub fn start_server(
-    port: u16,
-    end: Option<u32>,
-    verbose: Option<u8>
-) -> PyResult<()> {
+pub fn start_server(port: u16, end: Option<u32>, verbose: Option<u8>) -> PyResult<()> {
     let verbose = verbose.unwrap_or(0);
     let start = 2;
     let end = match end {
@@ -105,7 +101,7 @@ async fn run_server(port: u16, start: u32, end: u32, verbose: u8) -> PyResult<()
 
     loop {
         if server_state.status == "completed" {
-            if  countdown  == 1 {
+            if countdown == 1 {
                 let e = server_state.save_primes_to_file();
                 if verbose > 0 && e.is_err() {
                     eprintln!("❌ Failed to save primes: {:?}", e);
@@ -117,29 +113,32 @@ async fn run_server(port: u16, start: u32, end: u32, verbose: u8) -> PyResult<()
                 countdown += 1;
             }
         }
-    
+
         let mut buffer = vec![0; 65535];
-    
+
         match socket.recv_from(&mut buffer).await {
             Ok((size, src)) => {
                 buffer.truncate(size);
                 let request = String::from_utf8_lossy(&buffer[..size]);
-    
+
                 if verbose > 1 {
                     println!("📩 Received request from {}: {}", src, request);
                 }
-    
+
                 if let Some(request_data) = Request::from_json(&request) {
                     let response = handler(&mut server_state, request_data);
                     if verbose > 1 {
                         println!("📤 Response being sent: {:?}", response);
                     }
-                    socket.send_to(response.to_json().as_bytes(), src).await.unwrap();
+                    socket
+                        .send_to(response.to_json().as_bytes(), src)
+                        .await
+                        .unwrap();
                 } else {
                     if verbose > 1 {
                         println!("⚠️ Invalid request format!");
                     }
-    
+
                     let error_response = Response {
                         task: "error".to_string(),
                         status: "invalid_request".to_string(),
@@ -147,8 +146,11 @@ async fn run_server(port: u16, start: u32, end: u32, verbose: u8) -> PyResult<()
                         end: None,
                         primes: None,
                     };
-    
-                    socket.send_to(error_response.to_json().as_bytes(), src).await.unwrap();
+
+                    socket
+                        .send_to(error_response.to_json().as_bytes(), src)
+                        .await
+                        .unwrap();
                 }
             }
             Err(e) => {

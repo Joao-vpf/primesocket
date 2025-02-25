@@ -1,9 +1,9 @@
 use crate::utils;
-use utils::sieve::sieve_segment;
-use utils::json::{Request, Response};
-use tokio::net::UdpSocket;
-use pyo3::prelude::*;
 use pyo3::exceptions::PyValueError;
+use pyo3::prelude::*;
+use tokio::net::UdpSocket;
+use utils::json::{Request, Response};
+use utils::sieve::sieve_segment;
 
 /// Handles incoming requests and processes them based on the requested task.
 ///
@@ -47,20 +47,16 @@ pub async fn handler(response: Response) -> Request {
                 primes: Some(result),
             }
         }
-        "continue" => {
-            Request {
-                task: "continue".to_string(),
-                end: None,
-                primes: None,
-            }
-        }
-        _ => {
-            Request {
-                task: "close".to_string(),
-                end: None,
-                primes: None,
-            }
-        }
+        "continue" => Request {
+            task: "continue".to_string(),
+            end: None,
+            primes: None,
+        },
+        _ => Request {
+            task: "close".to_string(),
+            end: None,
+            primes: None,
+        },
     }
 }
 
@@ -87,7 +83,13 @@ pub async fn handler(response: Response) -> Request {
 /// let request = Request { ... };
 /// send_request(&socket, "127.0.0.1", 8081, &request).await.unwrap();
 /// ```
-pub async fn send_request(socket: &UdpSocket, ip: &str, port: u16, request: &Request, verbose: u8) -> PyResult<()> {
+pub async fn send_request(
+    socket: &UdpSocket,
+    ip: &str,
+    port: u16,
+    request: &Request,
+    verbose: u8,
+) -> PyResult<()> {
     let request_json = request.to_json();
     if verbose > 1 {
         println!("📩 Sending request to {}:{}: {}", ip, port, request_json);
@@ -98,9 +100,7 @@ pub async fn send_request(socket: &UdpSocket, ip: &str, port: u16, request: &Req
     socket
         .send_to(request_json.as_bytes(), &target)
         .await
-        .map_err(|e| {
-            PyErr::new::<PyValueError, _>(format!("Failed to send request: {}", e))
-        })?;
+        .map_err(|e| PyErr::new::<PyValueError, _>(format!("Failed to send request: {}", e)))?;
 
     Ok(())
 }

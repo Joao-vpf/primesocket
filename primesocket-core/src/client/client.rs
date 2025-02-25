@@ -1,12 +1,12 @@
+use super::request_handler::{handler, send_request};
+use crate::utils;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use tokio::net::UdpSocket;
-use crate::utils;
 use utils::json::{Request, Response};
-use super::request_handler::{handler, send_request};
 
 /// Starts a UDP client that sends requests to the server and handles the response.
-/// 
+///
 /// This function allows the client to send requests to a server listening on a specific IP and port.
 /// It sends requests with a defined range for prime number computation and processes the server's response.
 ///
@@ -45,7 +45,7 @@ pub fn start_client(ip: &str, port: u16, verbose: Option<u8>) -> PyResult<()> {
 }
 
 /// Runs the UDP client that sends requests and handles server responses.
-/// 
+///
 /// This function binds a UDP socket and sends a request to the server.
 /// It processes the server's response asynchronously.
 ///
@@ -76,7 +76,7 @@ async fn run_client(ip: &str, port: u16, verbose: u8) -> PyResult<()> {
             task: "start".to_string(),
             end: None,
             primes: None,
-        };    
+        };
         send_request(&socket, ip, port, &request, verbose).await?;
 
         // Receive the server's response
@@ -88,7 +88,7 @@ async fn run_client(ip: &str, port: u16, verbose: u8) -> PyResult<()> {
                 if verbose > 1 {
                     println!("📩 Received response from {}: {}", src, response);
                 }
-    
+
                 if let Some(response_data) = Response::from_json(&response) {
                     if verbose > 1 {
                         println!("✅ Server Response: {:?}", response_data);
@@ -99,7 +99,7 @@ async fn run_client(ip: &str, port: u16, verbose: u8) -> PyResult<()> {
                             send_request(&socket, ip, port, &request, verbose).await?;
                             continue;
                         }
-                        "continue" => {	
+                        "continue" => {
                             continue;
                         }
                         _ => {

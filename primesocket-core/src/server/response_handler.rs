@@ -1,7 +1,7 @@
-use std::cmp::{max, min};
-use crate::utils::json::{Request, Response};
-use std::collections::BTreeSet;
 use crate::server::server_state::ServerState;
+use crate::utils::json::{Request, Response};
+use std::cmp::{max, min};
+use std::collections::BTreeSet;
 
 /// Handles incoming requests and processes them based on the requested task.
 ///
@@ -41,16 +41,34 @@ pub fn handler(server_state: &mut ServerState, request: Request) -> Response {
             task: "range".to_string(),
             status: server_state.status.clone(),
             start: Some(server_state.last_checked),
-            end: Some(min(server_state.last_checked + server_state.step, server_state.end)),
-            primes: Some(server_state.primes.iter().take(10_000).cloned().collect::<Vec<u32>>()),
+            end: Some(min(
+                server_state.last_checked + server_state.step,
+                server_state.end,
+            )),
+            primes: Some(
+                server_state
+                    .primes
+                    .iter()
+                    .take(10_000)
+                    .cloned()
+                    .collect::<Vec<u32>>(),
+            ),
         },
         "save" => {
             let last_checked = request.end.unwrap_or(0);
-            server_state.primes.extend(request.primes.unwrap_or_default());
-            server_state.primes = server_state.primes.iter().cloned().collect::<BTreeSet<_>>().into_iter().collect();
+            server_state
+                .primes
+                .extend(request.primes.unwrap_or_default());
+            server_state.primes = server_state
+                .primes
+                .iter()
+                .cloned()
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect();
             if server_state.step < 1000 {
-                server_state.step =  server_state.primes.last().unwrap() * server_state.primes.last().unwrap() / 2;
-                
+                server_state.step =
+                    server_state.primes.last().unwrap() * server_state.primes.last().unwrap() / 2;
             }
             server_state.last_checked = max(last_checked, server_state.last_checked);
 
@@ -73,7 +91,7 @@ pub fn handler(server_state: &mut ServerState, request: Request) -> Response {
                 end: None,
                 primes: None,
             }
-        },
+        }
         _ => Response {
             task: "error".to_string(),
             status: "invalid_task".to_string(),
