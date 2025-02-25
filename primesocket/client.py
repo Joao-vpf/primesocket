@@ -16,7 +16,7 @@ async def run_client(ip: str, port: int):
         The port number to connect to.
     """
     try:
-        primesocket_core.start_client(ip, port, verbose=1)
+        primesocket_core.start_client(ip, port, verbose=0)
     except Exception as e:
         print(f"Error starting client: {e}")
 

@@ -6,7 +6,9 @@ use pyo3::prelude::*;
 use std::io::ErrorKind;
 use tokio::net::UdpSocket;
 use tokio::runtime::Runtime;
-
+use std::collections::HashSet;
+use tokio::sync::Mutex;
+use std::sync::Arc;
 /// Starts a UDP server for processing client requests.
 ///
 /// This function initializes a server that listens on a specified port and
@@ -98,6 +100,7 @@ async fn run_server(port: u16, start: u32, end: u32, verbose: u8) -> PyResult<()
     // Shared state for managing prime number computation
     let mut server_state = ServerState::new(start, end);
     let mut countdown = 0;
+    let clients: Arc<Mutex<HashSet<String>>> = Arc::new(Mutex::new(HashSet::new()));
 
     loop {
         if server_state.status == "completed" {
@@ -120,6 +123,14 @@ async fn run_server(port: u16, start: u32, end: u32, verbose: u8) -> PyResult<()
             Ok((size, src)) => {
                 buffer.truncate(size);
                 let request = String::from_utf8_lossy(&buffer[..size]);
+
+                let client_addr = src.to_string();
+                let mut clients_lock = clients.lock().await;
+                
+                if verbose > 1 && !clients_lock.contains(&client_addr) {
+                    clients_lock.insert(client_addr.clone());
+                    println!("🔗 New client connected: {}", client_addr);
+                }
 
                 if verbose > 1 {
                     println!("📩 Received request from {}: {}", src, request);

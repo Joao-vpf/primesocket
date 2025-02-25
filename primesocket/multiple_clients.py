@@ -18,7 +18,7 @@ def run_client(ip: str, port: int, client_id: int):
     """
     try:
         print(f"Client {client_id} starting...")
-        primesocket_core.start_client(ip, port, verbose=2)
+        primesocket_core.start_client(ip, port, verbose=0)
         print(f"Client {client_id} finished.")
     except Exception as e:
         print(f"Error in Client {client_id}: {e}")
@@ -48,4 +48,4 @@ def run_multiple_clients(ip: str, port: int, num_clients: int):
 
 
 if __name__ == "__main__":
-    run_multiple_clients("127.0.0.1", 9999, 2)
+    run_multiple_clients("127.0.0.1", 9999, 10)

@@ -49,7 +49,7 @@ pub fn handler(server_state: &mut ServerState, request: Request) -> Response {
                 server_state
                     .primes
                     .iter()
-                    .take(10_000)
+                    .take(5_000)
                     .cloned()
                     .collect::<Vec<u32>>(),
             ),
@@ -66,10 +66,6 @@ pub fn handler(server_state: &mut ServerState, request: Request) -> Response {
                 .collect::<BTreeSet<_>>()
                 .into_iter()
                 .collect();
-            if server_state.step < 1000 {
-                server_state.step =
-                    server_state.primes.last().unwrap() * server_state.primes.last().unwrap() / 2;
-            }
             server_state.last_checked = max(last_checked, server_state.last_checked);
 
             // If the last checked number reaches the end, mark as completed.
