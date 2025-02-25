@@ -9,7 +9,7 @@ async def run_server():
     This function initializes the server and keeps it running.
     """
     try:
-        primesocket_core.start_server(8080, end=100000)
+        primesocket_core.start_server(9999, end=100000, verbose=0)
     except Exception as e:
         print(f"Error starting server: {e}")
 

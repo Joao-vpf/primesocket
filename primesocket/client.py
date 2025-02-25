@@ -2,21 +2,15 @@ import asyncio
 import primesocket_core
 
 
-async def run_client(ip: str, port: int, timeout: int = 1):
-    client_task = asyncio.create_task(primesocket_core.start_client(ip, port))
-
+async def run_client(ip: str, port: int):
     try:
-        await asyncio.wait_for(client_task, timeout)
-    except asyncio.TimeoutError:
-        print(f"⚠️ Timeout atingido após {timeout} segundo(s). Cliente cancelado.")
-        client_task.cancel()
-        await client_task
+        primesocket_core.start_client(ip, port, verbose=1)
+    except Exception as e:
+        print(f"Error starting server: {e}")
 
 
 if __name__ == "__main__":
-    # IP e porta do servidor
     server_ip = "127.0.0.1"
-    server_port = 8080
+    server_port = 9999
 
-    # Executando o cliente
     asyncio.run(run_client(server_ip, server_port))
