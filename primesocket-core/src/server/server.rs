@@ -3,12 +3,12 @@ use super::server_state::ServerState;
 use crate::utils::json::{Request, Response};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use std::collections::HashSet;
 use std::io::ErrorKind;
+use std::sync::Arc;
 use tokio::net::UdpSocket;
 use tokio::runtime::Runtime;
-use std::collections::HashSet;
 use tokio::sync::Mutex;
-use std::sync::Arc;
 /// Starts a UDP server for processing client requests.
 ///
 /// This function initializes a server that listens on a specified port and
@@ -126,7 +126,7 @@ async fn run_server(port: u16, start: u32, end: u32, verbose: u8) -> PyResult<()
 
                 let client_addr = src.to_string();
                 let mut clients_lock = clients.lock().await;
-                
+
                 if verbose > 1 && !clients_lock.contains(&client_addr) {
                     clients_lock.insert(client_addr.clone());
                     println!("🔗 New client connected: {}", client_addr);

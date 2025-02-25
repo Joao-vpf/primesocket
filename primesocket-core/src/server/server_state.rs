@@ -62,7 +62,10 @@ impl ServerState {
             last_checked: start,
             primes: {
                 let mut primes = Vec::with_capacity(10000);
-                primes.extend(vec![2, 3, 5, 7, 11 ,13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97]);
+                primes.extend(vec![
+                    2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73,
+                    79, 83, 89, 97,
+                ]);
                 primes
             },
             status: String::from("processing"),
