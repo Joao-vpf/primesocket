@@ -49,4 +49,4 @@ jobs:
       run: rustup component add rustfmt --toolchain nightly
 
     - name: Run rustfmt
-      run: cargo +nightly fmt -- --check
+      run: cargo +nightly fmt --manifest-path primesocket-core/Cargo.toml -- --check
