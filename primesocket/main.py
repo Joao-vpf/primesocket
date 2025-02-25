@@ -1,4 +1,10 @@
+"""
+This script runs a UDP server.
+
+The server is initialized and kept running in an asynchronous manner.
+"""
 import asyncio
+
 import primesocket_core
 
 
