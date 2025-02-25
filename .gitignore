@@ -1,0 +1,81 @@
+# ---------------------------------
+# Rust
+# ---------------------------------
+target/
+**/target/
+Cargo.lock
+debug/
+release/
+*.rs.bk
+
+# Rust - Build Artifacts
+*.rlib
+*.rmeta
+*.dSYM/
+*.pdb
+*.so
+*.dylib
+*.dll
+*.a
+
+# Rust - IDE and Tools
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*.log
+*.bak
+*.tmp
+
+# ---------------------------------
+# Python
+# ---------------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.whl
+*.egg-info/
+dist/
+build/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+.env/
+
+# Pip and Pyenv
+pip-log.txt
+pip-delete-this-directory.txt
+.python-version
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# ---------------------------------
+# Security (Prevents sensitive data leaks)
+# ---------------------------------
+.env
+*.env
+*.key
+*.pem
+*.crt
+*.der
+*.pfx
+*.p12
+config.toml
+config.yaml
+secrets.json
+credentials.json
+settings.py
+
+# ---------------------------------
+# Git
+# ---------------------------------
+.DS_Store
+Thumbs.db
+*.orig
+*.swp
+*.swo
