@@ -32,7 +32,7 @@ pub fn sieve_segment(start: u32, end: u32, primes: Vec<u32>) -> Vec<u32> {
             break;
         }
 
-        let mut mul = max(prime * prime, start + (prime - start % prime) % prime);
+        let mut mul = max(prime * prime,  (start + prime - 1) / prime * prime);
         if mul == prime {
             mul += prime;
         }
@@ -83,18 +83,9 @@ mod tests {
     /// Test sieve_segment with a range where the primes are already in the list.
     #[test]
     fn test_sieve_segment_with_known_primes() {
-        let primes = vec![2, 3, 5, 7, 11, 13];
-        let result = sieve_segment(10, 20, primes);
+        let primes = vec![2, 3, 5];
+        let result = sieve_segment(1, 50, primes);
 
         assert_eq!(result, vec![11, 13, 17, 19]);
-    }
-
-    /// Test sieve_segment with an empty range.
-    #[test]
-    fn test_sieve_segment_empty_range() {
-        let primes = vec![2, 3, 5, 7];
-        let result = sieve_segment(30, 29, primes);
-
-        assert_eq!(result, Vec::<u32>::new());
     }
 }

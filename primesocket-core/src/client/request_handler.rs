@@ -87,9 +87,11 @@ pub async fn handler(response: Response) -> Request {
 /// let request = Request { ... };
 /// send_request(&socket, "127.0.0.1", 8081, &request).await.unwrap();
 /// ```
-pub async fn send_request(socket: &UdpSocket, ip: &str, port: u16, request: &Request) -> PyResult<()> {
+pub async fn send_request(socket: &UdpSocket, ip: &str, port: u16, request: &Request, verbose: u8) -> PyResult<()> {
     let request_json = request.to_json();
-    println!("📩 Sending request to {}:{}: {}", ip, port, request_json);
+    if verbose > 1 {
+        println!("📩 Sending request to {}:{}: {}", ip, port, request_json);
+    }
 
     let target = format!("{}:{}", ip, port);
 

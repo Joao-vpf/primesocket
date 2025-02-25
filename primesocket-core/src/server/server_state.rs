@@ -55,10 +55,10 @@ impl ServerState {
     /// assert_eq!(state.end, 100);
     /// assert_eq!(state.status, "processing");
     /// ```
-    pub fn new(start: u32, end: u32, step: u32) -> ServerState {
+    pub fn new(start: u32, end: u32) -> ServerState {
         ServerState {
             end,
-            step,
+            step: 5,
             last_checked: start,
             primes: {
                 let mut primes = Vec::with_capacity(10000);
@@ -108,12 +108,12 @@ mod tests {
     fn test_server_state_creation() {
         let start = 0;
         let end = 100;
-        let step = 10;
 
-        let server_state = ServerState::new(start, end, step);
+        let server_state = ServerState::new(start, end);
 
+        assert_eq!(server_state.last_checked, 0);
         assert_eq!(server_state.end, 100);
-        assert_eq!(server_state.step, 10);
+        assert_eq!(server_state.step, 5);
         assert!(!server_state.primes.is_empty());
         assert_eq!(server_state.status, "processing");
     }

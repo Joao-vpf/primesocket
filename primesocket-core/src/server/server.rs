@@ -3,7 +3,7 @@ use super::server_state::ServerState;
 use crate::utils::json::{Request, Response};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use std::cmp::min;
+use std::io::ErrorKind;
 use tokio::net::UdpSocket;
 use tokio::runtime::Runtime;
 
@@ -27,22 +27,20 @@ use tokio::runtime::Runtime;
 ///
 /// ```python
 /// import primesocket_core
-/// primesocket_core.start_server(8080, end=1000, step=10)
+/// primesocket_core.start_server(8080, end=1000)
 /// ```
-#[pyfunction(signature = (port, end=None, step=None))]
+#[pyfunction(signature = (port, end=None, verbose=None))]
 pub fn start_server(
     port: u16,
     end: Option<u32>,
-    step: Option<u32>,
+    verbose: Option<u8>
 ) -> PyResult<()> {
-    let start = 1;
+    let verbose = verbose.unwrap_or(0);
+    let start = 2;
     let end = match end {
         Some(e) => e,
         None => return Err(PyErr::new::<PyValueError, _>("Parameter 'end' is required")),
     };
-
-    let step = step.unwrap_or(10);
-    let step = min((end - start) * step / 100, 1000);
 
     // Start the server asynchronously
     let rt = Runtime::new().map_err(|e| {
@@ -50,8 +48,10 @@ pub fn start_server(
     })?;
 
     rt.block_on(async move {
-        if let Err(e) = run_server(port, start, end, step).await {
-            eprintln!("❌ Server encountered an error while running: {:?}", e);
+        if let Err(e) = run_server(port, start, end, verbose).await {
+            if verbose > 0 {
+                eprintln!("❌ Server encountered an error while running: {:?}", e);
+            }
         }
     });
 
@@ -79,15 +79,19 @@ pub fn start_server(
 /// * It runs in an infinite loop, receiving UDP packets from clients.
 /// * It processes the received JSON request using `handler`.
 /// * It sends a response back to the client based on the processed request.
-async fn run_server(port: u16, start: u32, end: u32, step: u32) -> PyResult<()> {
+async fn run_server(port: u16, start: u32, end: u32, verbose: u8) -> PyResult<()> {
     // Attempt to bind the UDP socket
     let socket = match UdpSocket::bind(format!("0.0.0.0:{}", port)).await {
         Ok(sock) => {
-            println!("🚀 Server started on port {}", port);
+            if verbose > 0 {
+                println!("🚀 Server started on port {}", port);
+            }
             sock
         }
         Err(e) => {
-            eprintln!("❌ Failed to bind UDP socket: {:?}", e);
+            if verbose > 0 {
+                eprintln!("❌ Failed to bind UDP socket: {:?}", e);
+            }
             return Err(PyErr::new::<PyValueError, _>(format!(
                 "Failed to bind UDP socket: {}",
                 e
@@ -96,36 +100,46 @@ async fn run_server(port: u16, start: u32, end: u32, step: u32) -> PyResult<()> 
     };
 
     // Shared state for managing prime number computation
-    let mut server_state = ServerState::new(start, end, step);
+    let mut server_state = ServerState::new(start, end);
+    let mut countdown = 0;
 
-    // Infinite loop to process incoming requests
     loop {
         if server_state.status == "completed" {
-            if let Err(e) = server_state.save_primes_to_file() {
-                eprintln!("❌ Failed to save primes: {:?}", e);
+            if  countdown  == 1 {
+                let e = server_state.save_primes_to_file();
+                if verbose > 0 && e.is_err() {
+                    eprintln!("❌ Failed to save primes: {:?}", e);
+                }
+                break;
             }
-            break;
+
+            if countdown == 0 {
+                countdown += 1;
+            }
         }
-
+    
         let mut buffer = vec![0; 65535];
-
+    
         match socket.recv_from(&mut buffer).await {
             Ok((size, src)) => {
                 buffer.truncate(size);
-
                 let request = String::from_utf8_lossy(&buffer[..size]);
-                println!("📩 Received request from {}: {}", src, request);
-
+    
+                if verbose > 1 {
+                    println!("📩 Received request from {}: {}", src, request);
+                }
+    
                 if let Some(request_data) = Request::from_json(&request) {
                     let response = handler(&mut server_state, request_data);
-                    println!("📤 Response being sent: {:?}", response);
-                    socket
-                        .send_to(response.to_json().as_bytes(), src)
-                        .await
-                        .unwrap();
+                    if verbose > 1 {
+                        println!("📤 Response being sent: {:?}", response);
+                    }
+                    socket.send_to(response.to_json().as_bytes(), src).await.unwrap();
                 } else {
-                    println!("⚠️ Invalid request format!");
-
+                    if verbose > 1 {
+                        println!("⚠️ Invalid request format!");
+                    }
+    
                     let error_response = Response {
                         task: "error".to_string(),
                         status: "invalid_request".to_string(),
@@ -133,16 +147,21 @@ async fn run_server(port: u16, start: u32, end: u32, step: u32) -> PyResult<()> 
                         end: None,
                         primes: None,
                     };
-
-                    socket
-                        .send_to(error_response.to_json().as_bytes(), src)
-                        .await
-                        .unwrap();
+    
+                    socket.send_to(error_response.to_json().as_bytes(), src).await.unwrap();
                 }
             }
             Err(e) => {
-                eprintln!("❌ Failed to receive data: {:?}", e);
-                break;
+                if e.kind() == ErrorKind::ConnectionReset {
+                    if verbose > 1 {
+                        eprintln!("⚠️ Connection was reset by a remote client. Ignoring...");
+                    }
+                    continue; // Ignora e continua o loop
+                } else {
+                    if verbose > 0 {
+                        eprintln!("❌ Failed to receive data: {:?}", e);
+                    }
+                }
             }
         }
     }

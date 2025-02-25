@@ -1,5 +1,6 @@
-use std::cmp::max;
+use std::cmp::{max, min};
 use crate::utils::json::{Request, Response};
+use std::collections::BTreeSet;
 use crate::server::server_state::ServerState;
 
 /// Handles incoming requests and processes them based on the requested task.
@@ -40,12 +41,17 @@ pub fn handler(server_state: &mut ServerState, request: Request) -> Response {
             task: "range".to_string(),
             status: server_state.status.clone(),
             start: Some(server_state.last_checked),
-            end: Some(server_state.last_checked + server_state.step),
+            end: Some(min(server_state.last_checked + server_state.step, server_state.end)),
             primes: Some(server_state.primes.iter().take(10_000).cloned().collect::<Vec<u32>>()),
         },
         "save" => {
             let last_checked = request.end.unwrap_or(0);
-            server_state.primes.extend(request.primes.unwrap_or([].to_vec()));
+            server_state.primes.extend(request.primes.unwrap_or_default());
+            server_state.primes = server_state.primes.iter().cloned().collect::<BTreeSet<_>>().into_iter().collect();
+            if server_state.step < 1000 {
+                server_state.step =  server_state.primes.last().unwrap() * server_state.primes.last().unwrap() / 2;
+                
+            }
             server_state.last_checked = max(last_checked, server_state.last_checked);
 
             // If the last checked number reaches the end, mark as completed.
@@ -92,9 +98,8 @@ mod unit_tests {
     fn test_handler_start_request() {
         let start = 0;
         let end = 100;
-        let step = 10;
 
-        let mut server_state = ServerState::new(start, end, step);
+        let mut server_state = ServerState::new(start, end);
 
         let request = Request {
             task: "start".to_string(),

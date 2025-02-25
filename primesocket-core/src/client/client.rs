@@ -25,16 +25,19 @@ use super::request_handler::{handler, send_request};
 /// import primesocket_core
 /// primesocket_core.start_client("127.0.0.1", 8080)
 /// ```
-#[pyfunction(signature = (ip, port))]
-pub fn start_client(ip: &str, port: u16) -> PyResult<()> {
+#[pyfunction(signature = (ip, port, verbose=None))]
+pub fn start_client(ip: &str, port: u16, verbose: Option<u8>) -> PyResult<()> {
+    let verbose = verbose.unwrap_or(0);
     // Set up the client asynchronously
     let rt = tokio::runtime::Runtime::new().map_err(|e| {
         PyErr::new::<PyValueError, _>(format!("Failed to create Tokio runtime: {}", e))
     })?;
 
     rt.block_on(async {
-        if let Err(e) = run_client(ip, port).await {
-            eprintln!("❌ Client encountered an error: {:?}", e);
+        if let Err(e) = run_client(ip, port, verbose).await {
+            if verbose > 0 {
+                eprintln!("❌ Client encountered an error: {:?}", e);
+            }
         }
     });
 
@@ -54,11 +57,13 @@ pub fn start_client(ip: &str, port: u16) -> PyResult<()> {
 /// # Errors
 ///
 /// Returns a `PyValueError` if it fails to communicate with the server.
-async fn run_client(ip: &str, port: u16) -> PyResult<()> {
+async fn run_client(ip: &str, port: u16, verbose: u8) -> PyResult<()> {
     let socket = match UdpSocket::bind("0.0.0.0:0").await {
         Ok(sock) => sock,
         Err(e) => {
-            eprintln!("❌ Failed to bind UDP socket: {:?}", e);
+            if verbose > 0 {
+                eprintln!("❌ Failed to bind UDP socket: {:?}", e);
+            }
             return Err(PyErr::new::<PyValueError, _>(format!(
                 "Failed to bind UDP socket: {}",
                 e
@@ -72,7 +77,7 @@ async fn run_client(ip: &str, port: u16) -> PyResult<()> {
             end: None,
             primes: None,
         };    
-        send_request(&socket, ip, port, &request).await?;
+        send_request(&socket, ip, port, &request, verbose).await?;
 
         // Receive the server's response
         let mut buffer = vec![0; 65535];
@@ -80,31 +85,41 @@ async fn run_client(ip: &str, port: u16) -> PyResult<()> {
             Ok((size, src)) => {
                 buffer.truncate(size);
                 let response = String::from_utf8_lossy(&buffer);
-                println!("📩 Received response from {}: {}", src, response);
+                if verbose > 1 {
+                    println!("📩 Received response from {}: {}", src, response);
+                }
     
                 if let Some(response_data) = Response::from_json(&response) {
-                    println!("✅ Server Response: {:?}", response_data);
+                    if verbose > 1 {
+                        println!("✅ Server Response: {:?}", response_data);
+                    }
                     let request = handler(response_data).await;
                     match request.task.as_str() {
                         "save" => {
-                            send_request(&socket, ip, port, &request).await?;
+                            send_request(&socket, ip, port, &request, verbose).await?;
                             continue;
                         }
                         "continue" => {	
                             continue;
                         }
                         _ => {
-                            eprintln!("✅ Client finished");
+                            if verbose > 1 {
+                                eprintln!("✅ Client finished");
+                            }
                             break;
                         }
                     }
                 } else {
-                    eprintln!("⚠️ Invalid response format!");
+                    if verbose > 1 {
+                        eprintln!("⚠️ Invalid response format!");
+                    }
                     continue;
                 }
             }
             Err(e) => {
-                eprintln!("❌ Failed to receive data: {:?}", e);
+                if verbose > 1 {
+                    eprintln!("❌ Failed to receive data: {:?}", e);
+                }
                 return Err(PyErr::new::<PyValueError, _>(format!(
                     "Failed to receive response: {}",
                     e
