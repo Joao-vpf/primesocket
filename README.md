@@ -101,7 +101,7 @@ primesocket-client --ip 127.0.0.1 --port 8080 --verbose 1 --timeout 120
 
 1. Clone o repositório:
    ```sh
-   git clone https://github.com/seuusuario/primesocket.git
+   git clone https://github.com/joao-vpf/primesocket.git
    cd primesocket
    ```
 
