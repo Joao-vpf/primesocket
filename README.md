@@ -114,15 +114,7 @@ primesocket-client --ip 127.0.0.1 --port 8080 --verbose 1 --timeout 120
    ```sh
    maturin develop
    ```
-
-### Testes
-
-Para executar os testes:
-
-```sh
-pytest tests/
-```
-
+   
 ---
 
 ## Licença
