@@ -7,8 +7,11 @@ use std::collections::HashSet;
 use std::io::ErrorKind;
 use std::sync::Arc;
 use tokio::net::UdpSocket;
-use tokio::runtime::Runtime;
-use tokio::sync::Mutex;
+use tokio::runtime::Builder;
+use tokio::sync::{mpsc, Mutex};
+use std::time::Duration;
+use tokio::time::sleep;
+
 /// Starts a UDP server for processing client requests.
 ///
 /// This function initializes a server that listens on a specified port and
@@ -19,18 +22,11 @@ use tokio::sync::Mutex;
 ///
 /// * `port` - The UDP port where the server will listen.
 /// * `end` - The ending value of the number range to be processed (mandatory).
-/// * `step` - (Optional) Defines the processing step size.
+/// * `verbose` - (Optional) Verbosity level for logging.
 ///
 /// # Errors
 ///
 /// This function returns a `PyValueError` if the `end` parameter is not provided.
-///
-/// # Example (Python)
-///
-/// ```python
-/// import primesocket_core
-/// primesocket_core.start_server(8080, end=1000)
-/// ```
 #[pyfunction(signature = (port, end=None, verbose=None))]
 pub fn start_server(port: u16, end: Option<u32>, verbose: Option<u8>) -> PyResult<()> {
     let verbose = verbose.unwrap_or(0);
@@ -40,15 +36,16 @@ pub fn start_server(port: u16, end: Option<u32>, verbose: Option<u8>) -> PyResul
         None => return Err(PyErr::new::<PyValueError, _>("Parameter 'end' is required")),
     };
 
-    // Start the server asynchronously
-    let rt = Runtime::new().map_err(|e| {
-        PyErr::new::<PyValueError, _>(format!("Failed to create Tokio runtime: {}", e))
-    })?;
+    // Create a multi-threaded runtime
+    let rt = Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .map_err(|e| PyErr::new::<PyValueError, _>(format!("Failed to create Tokio runtime: {}", e)))?;
 
     rt.block_on(async move {
         if let Err(e) = run_server(port, start, end, verbose).await {
             if verbose > 0 {
-                eprintln!("❌ Server encountered an error while running: {:?}", e);
+                eprintln!("❌ Server encountered an error: {:?}", e);
             }
         }
     });
@@ -59,37 +56,29 @@ pub fn start_server(port: u16, end: Option<u32>, verbose: Option<u8>) -> PyResul
 /// Runs the UDP server and processes client requests.
 ///
 /// This function binds a UDP socket to the given port and listens for incoming
-/// messages. It processes requests using a shared `ServerState` and responds accordingly.
+/// messages. It processes requests using a shared `ServerState` and enqueues the responses
+/// to a dedicated task for sending.
 ///
 /// # Arguments
 ///
 /// * `port` - The UDP port to bind the socket.
 /// * `start` - The start of the number range.
 /// * `end` - The end of the number range.
-/// * `step` - The step size for processing.
+/// * `verbose` - Verbosity level for logging.
 ///
 /// # Errors
 ///
 /// This function returns a `PyValueError` if it fails to bind the UDP socket.
-///
-/// # Behavior
-///
-/// * It runs in an infinite loop, receiving UDP packets from clients.
-/// * It processes the received JSON request using `handler`.
-/// * It sends a response back to the client based on the processed request.
 async fn run_server(port: u16, start: u32, end: u32, verbose: u8) -> PyResult<()> {
-    // Attempt to bind the UDP socket
+    // Bind the UDP socket and wrap it in an Arc for thread-safe sharing
     let socket = match UdpSocket::bind(format!("0.0.0.0:{}", port)).await {
         Ok(sock) => {
             if verbose > 0 {
                 println!("🚀 Server started on port {}", port);
             }
-            sock
+            Arc::new(sock)
         }
         Err(e) => {
-            if verbose > 0 {
-                eprintln!("❌ Failed to bind UDP socket: {:?}", e);
-            }
             return Err(PyErr::new::<PyValueError, _>(format!(
                 "Failed to bind UDP socket: {}",
                 e
@@ -97,87 +86,108 @@ async fn run_server(port: u16, start: u32, end: u32, verbose: u8) -> PyResult<()
         }
     };
 
-    // Shared state for managing prime number computation
-    let mut server_state = ServerState::new(start, end);
-    let mut countdown = 0;
+    let (response_tx, mut response_rx) = mpsc::channel::<(String, std::net::SocketAddr)>(100);
+
+    let socket_for_sender = socket.clone();
+    tokio::spawn(async move {
+        while let Some((response_json, addr)) = response_rx.recv().await {
+            if let Err(e) = socket_for_sender.send_to(response_json.as_bytes(), addr).await {
+                eprintln!("❌ Error sending response to {}: {:?}", addr, e);
+            }
+        }
+    });
+
+    let server_state = Arc::new(Mutex::new(ServerState::new(start, end)));
     let clients: Arc<Mutex<HashSet<String>>> = Arc::new(Mutex::new(HashSet::new()));
 
     loop {
-        if server_state.status == "completed" {
-            if countdown == 1 {
-                let e = server_state.save_primes_to_file();
-                if verbose > 0 && e.is_err() {
-                    eprintln!("❌ Failed to save primes: {:?}", e);
+        {
+            let state = server_state.lock().await;
+            if state.status == "completed" {
+                if verbose > 0 {
+                    println!("✅ Computation finished. Shutting down server...");
                 }
                 break;
-            }
-
-            if countdown == 0 {
-                countdown += 1;
             }
         }
 
         let mut buffer = vec![0; 65535];
 
-        match socket.recv_from(&mut buffer).await {
-            Ok((size, src)) => {
-                buffer.truncate(size);
-                let request = String::from_utf8_lossy(&buffer[..size]);
+        tokio::select! {
+            result = socket.recv_from(&mut buffer) => {
+                match result {
+                    Ok((size, src)) => {
+                        buffer.truncate(size);
+                        let request = String::from_utf8_lossy(&buffer[..size]).to_string();
+                        let client_addr = src.to_string();
 
-                let client_addr = src.to_string();
-                let mut clients_lock = clients.lock().await;
+                        {
+                            let mut clients_lock = clients.lock().await;
+                            if verbose > 0 && !clients_lock.contains(&client_addr) {
+                                clients_lock.insert(client_addr.clone());
+                                println!("🔗 New client connected: {}", client_addr);
+                            }
+                        }
 
-                if verbose > 1 && !clients_lock.contains(&client_addr) {
-                    clients_lock.insert(client_addr.clone());
-                    println!("🔗 New client connected: {}", client_addr);
-                }
+                        let response_tx_clone = response_tx.clone();
+                        let server_state_clone = server_state.clone();
+                        let src_clone = src;
 
-                if verbose > 1 {
-                    println!("📩 Received request from {}: {}", src, request);
-                }
-
-                if let Some(request_data) = Request::from_json(&request) {
-                    let response = handler(&mut server_state, request_data);
-                    if verbose > 1 {
-                        println!("📤 Response being sent: {:?}", response);
+                        tokio::spawn(async move {
+                            let response_json = {
+                                let mut state = server_state_clone.lock().await;
+                                if state.status == "completed" {
+                                    if verbose > 0 {
+                                        println!("✅ Computation finished. Saving results...");
+                                    }
+                                    if let Err(e) = state.save_primes_to_file() {
+                                        eprintln!("❌ Error saving primes: {:?}", e);
+                                    }
+                                    return;
+                                }
+                                if let Some(request_data) = Request::from_json(&request) {
+                                    let response = handler(&mut state, request_data);
+                                    response.to_json()
+                                } else {
+                                    if verbose > 1 {
+                                        println!("⚠️ Invalid request format!");
+                                    }
+                                    let error_response = Response {
+                                        task: "error".to_string(),
+                                        status: "invalid_request".to_string(),
+                                        start: None,
+                                        end: None,
+                                        primes: None,
+                                    };
+                                    error_response.to_json()
+                                }
+                            };
+                            if verbose > 1 {
+                                println!("📤 Response being enqueued: {:?}", response_json);
+                            }
+                            if let Err(e) = response_tx_clone.send((response_json, src_clone)).await {
+                                eprintln!("❌ Failed to enqueue response: {:?}", e);
+                            }
+                        });
                     }
-                    socket
-                        .send_to(response.to_json().as_bytes(), src)
-                        .await
-                        .unwrap();
-                } else {
-                    if verbose > 1 {
-                        println!("⚠️ Invalid request format!");
-                    }
-
-                    let error_response = Response {
-                        task: "error".to_string(),
-                        status: "invalid_request".to_string(),
-                        start: None,
-                        end: None,
-                        primes: None,
-                    };
-
-                    socket
-                        .send_to(error_response.to_json().as_bytes(), src)
-                        .await
-                        .unwrap();
-                }
-            }
-            Err(e) => {
-                if e.kind() == ErrorKind::ConnectionReset {
-                    if verbose > 1 {
-                        eprintln!("⚠️ Connection was reset by a remote client. Ignoring...");
-                    }
-                    continue; // Ignora e continua o loop
-                } else {
-                    if verbose > 0 {
-                        eprintln!("❌ Failed to receive data: {:?}", e);
+                    Err(e) => {
+                        if e.kind() == ErrorKind::ConnectionReset {
+                            if verbose > 1 {
+                                eprintln!("⚠️ Connection reset by peer. Ignoring...");
+                            }
+                            continue;
+                        } else {
+                            if verbose > 0 {
+                                eprintln!("❌ Failed to receive data: {:?}", e);
+                            }
+                        }
                     }
                 }
+            },
+            _ = sleep(Duration::from_millis(10)) => {
+                continue;
             }
         }
     }
-
     Ok(())
 }

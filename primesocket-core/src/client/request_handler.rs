@@ -8,7 +8,7 @@ use utils::sieve::sieve_segment;
 /// Handles incoming requests and processes them based on the requested task.
 ///
 /// This function processes different types of tasks:
-/// - If the task is `"range"`, it computes a new range of primes using the `sieve_segment` function.
+/// - If the task is `"range"`, it computes a new range of prime numbers using the `sieve_segment` function.
 /// - If the task is `"continue"`, it indicates that the server should continue processing.
 /// - Any other task is handled with a `"close"` response.
 ///
@@ -19,21 +19,6 @@ use utils::sieve::sieve_segment;
 /// # Returns
 ///
 /// A `Request` object containing the task to be processed next along with any relevant data.
-///
-/// # Example
-///
-/// ```rust
-/// let response = Response {
-///     task: "range".to_string(),
-///     start: Some(0),
-///     end: Some(100),
-///     primes: Some(vec![2, 3, 5, 7, 11]),
-/// };
-///
-/// let request = handler(response).await;
-/// assert_eq!(request.task, "save");
-/// ```
-///
 pub async fn handler(response: Response) -> Request {
     match response.task.as_str() {
         "range" => {
@@ -70,19 +55,12 @@ pub async fn handler(response: Response) -> Request {
 /// * `ip` - The target IP address to send the request to.
 /// * `port` - The target port to send the request to.
 /// * `request` - The `Request` to be sent.
+/// * `verbose` - Verbosity level for logging output.
 ///
 /// # Returns
 ///
 /// This function returns a `PyResult<()>`, indicating success or failure. If the request fails to send,
 /// an error is returned with a message describing the failure.
-///
-/// # Example
-///
-/// ```rust
-/// let socket = UdpSocket::bind("0.0.0.0:8080").await.unwrap();
-/// let request = Request { ... };
-/// send_request(&socket, "127.0.0.1", 8081, &request).await.unwrap();
-/// ```
 pub async fn send_request(
     socket: &UdpSocket,
     ip: &str,

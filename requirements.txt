@@ -1,5 +1,2 @@
-# Progress bar utility
-tqdm>=4.67.1
-
 # Rust <--> Python integration
 maturin>=1.8.2

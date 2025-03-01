@@ -13,15 +13,6 @@ use std::io::{self, Write};
 /// * `last_checked` - The last number that has been processed.
 /// * `primes` - A list of identified prime numbers.
 /// * `status` - The current status of the computation (e.g., "processing", "completed").
-///
-/// # Example
-///
-/// ```rust
-/// let server_state = ServerState::new(0, 100, 10);
-/// assert_eq!(server_state.last_checked, 0);
-/// assert_eq!(server_state.end, 100);
-/// assert_eq!(server_state.status, "processing");
-/// ```
 #[derive(Clone, Debug)]
 pub struct ServerState {
     pub end: u32,
@@ -41,20 +32,10 @@ impl ServerState {
     ///
     /// * `start` - The starting number of the range.
     /// * `end` - The upper limit of the number range.
-    /// * `step` - The step size for processing.
     ///
     /// # Returns
     ///
     /// A new instance of `ServerState` initialized with the given parameters.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// let state = ServerState::new(0, 100, 10);
-    /// assert_eq!(state.last_checked, 0);
-    /// assert_eq!(state.end, 100);
-    /// assert_eq!(state.status, "processing");
-    /// ```
     pub fn new(start: u32, end: u32) -> ServerState {
         ServerState {
             end,
@@ -80,13 +61,6 @@ impl ServerState {
     /// # Errors
     ///
     /// Returns an `io::Result<()>` indicating whether the file was successfully created and written.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// let state = ServerState::new(0, 100, 10);
-    /// state.save_primes_to_file().expect("Failed to save primes");
-    /// ```
     pub fn save_primes_to_file(&self) -> io::Result<()> {
         let mut file = File::create("primes.txt")?;
         for prime in &self.primes {
@@ -116,7 +90,7 @@ mod tests {
 
         assert_eq!(server_state.last_checked, 0);
         assert_eq!(server_state.end, 100);
-        assert_eq!(server_state.step, 5);
+        assert_eq!(server_state.step, 1000);
         assert!(!server_state.primes.is_empty());
         assert_eq!(server_state.status, "processing");
     }
