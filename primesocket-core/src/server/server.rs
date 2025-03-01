@@ -6,10 +6,10 @@ use pyo3::prelude::*;
 use std::collections::HashSet;
 use std::io::ErrorKind;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::net::UdpSocket;
 use tokio::runtime::Builder;
 use tokio::sync::{mpsc, Mutex};
-use std::time::Duration;
 use tokio::time::sleep;
 
 /// Starts a UDP server for processing client requests.
@@ -40,7 +40,9 @@ pub fn start_server(port: u16, end: Option<u32>, verbose: Option<u8>) -> PyResul
     let rt = Builder::new_multi_thread()
         .enable_all()
         .build()
-        .map_err(|e| PyErr::new::<PyValueError, _>(format!("Failed to create Tokio runtime: {}", e)))?;
+        .map_err(|e| {
+            PyErr::new::<PyValueError, _>(format!("Failed to create Tokio runtime: {}", e))
+        })?;
 
     rt.block_on(async move {
         if let Err(e) = run_server(port, start, end, verbose).await {
@@ -91,7 +93,10 @@ async fn run_server(port: u16, start: u32, end: u32, verbose: u8) -> PyResult<()
     let socket_for_sender = socket.clone();
     tokio::spawn(async move {
         while let Some((response_json, addr)) = response_rx.recv().await {
-            if let Err(e) = socket_for_sender.send_to(response_json.as_bytes(), addr).await {
+            if let Err(e) = socket_for_sender
+                .send_to(response_json.as_bytes(), addr)
+                .await
+            {
                 eprintln!("❌ Error sending response to {}: {:?}", addr, e);
             }
         }

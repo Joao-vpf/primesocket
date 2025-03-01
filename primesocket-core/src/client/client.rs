@@ -29,10 +29,15 @@ use utils::json::{Request, Response};
 /// primesocket_core.start_client("127.0.0.1", 8080)
 /// ```
 #[pyfunction(signature = (ip, port, verbose=None, timeout_seconds=None))]
-pub fn start_client(ip: &str, port: u16, verbose: Option<u8>, timeout_seconds: Option<u64>) -> PyResult<()> {
+pub fn start_client(
+    ip: &str,
+    port: u16,
+    verbose: Option<u8>,
+    timeout_seconds: Option<u64>,
+) -> PyResult<()> {
     let verbose = verbose.unwrap_or(0);
     let timeout_seconds = timeout_seconds.unwrap_or(120);
-    
+
     // Create a new Tokio runtime to execute asynchronous operations
     let rt = tokio::runtime::Runtime::new().map_err(|e| {
         PyErr::new::<PyValueError, _>(format!("Failed to create Tokio runtime: {}", e))
@@ -73,7 +78,10 @@ async fn run_client(ip: &str, port: u16, verbose: u8, timeout_seconds: u64) -> P
             if verbose > 0 {
                 eprintln!("❌ Failed to bind UDP socket: {:?}", e);
             }
-            return Err(PyErr::new::<PyValueError, _>(format!("Failed to bind UDP socket: {}", e)));
+            return Err(PyErr::new::<PyValueError, _>(format!(
+                "Failed to bind UDP socket: {}",
+                e
+            )));
         }
     };
 
@@ -83,16 +91,21 @@ async fn run_client(ip: &str, port: u16, verbose: u8, timeout_seconds: u64) -> P
             end: None,
             primes: None,
         };
-        
+
         send_request(&socket, ip, port, &request, verbose).await?;
 
         let mut buffer = vec![0; 65535];
-        
-        match timeout(Duration::from_secs(timeout_seconds), socket.recv_from(&mut buffer)).await {
+
+        match timeout(
+            Duration::from_secs(timeout_seconds),
+            socket.recv_from(&mut buffer),
+        )
+        .await
+        {
             Ok(Ok((size, src))) => {
                 buffer.truncate(size);
                 let response = String::from_utf8_lossy(&buffer);
-                
+
                 if verbose > 1 {
                     println!("📩 Received response from {}: {}", src, response);
                 }
@@ -101,7 +114,7 @@ async fn run_client(ip: &str, port: u16, verbose: u8, timeout_seconds: u64) -> P
                     if verbose > 1 {
                         println!("✅ Server Response: {:?}", response_data);
                     }
-                    
+
                     let request = handler(response_data).await;
                     match request.task.as_str() {
                         "save" => {
@@ -129,11 +142,16 @@ async fn run_client(ip: &str, port: u16, verbose: u8, timeout_seconds: u64) -> P
                 if verbose > 1 {
                     eprintln!("❌ Failed to receive data: {:?}", e);
                 }
-                return Err(PyErr::new::<PyValueError, _>(format!("Failed to receive response: {}", e)));
+                return Err(PyErr::new::<PyValueError, _>(format!(
+                    "Failed to receive response: {}",
+                    e
+                )));
             }
             Err(_) => {
                 if verbose > 0 {
-                    eprintln!("⚠️ Connection lost: no response received within timeout. Disconnecting.");
+                    eprintln!(
+                        "⚠️ Connection lost: no response received within timeout. Disconnecting."
+                    );
                 }
                 break;
             }
