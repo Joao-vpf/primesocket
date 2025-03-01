@@ -8,11 +8,11 @@ install_requires = [
 
 if platform.system() == "Windows":
     install_requires.append(
-        'tabu_structure @ https://github.com/Joao-vpf/primesocket/releases/download/v0.1.0/primesocket_core-0.1.0-cp38-abi3-win_amd64.whl'
+        'primesocket_core @ https://github.com/Joao-vpf/primesocket/releases/download/v0.1.0/primesocket_core-0.1.0-cp38-abi3-win_amd64.whl'
     )
 elif platform.system() == "Linux":
     install_requires.append(
-        'tabu_structure @ https://github.com/Joao-vpf/primesocket/releases/download/v0.1.0/primesocket_core-0.1.0-cp38-abi3-manylinux_2_34_x86_64.whl'
+        'primesocket_core @ https://github.com/Joao-vpf/primesocket/releases/download/v0.1.0/primesocket_core-0.1.0-cp38-abi3-manylinux_2_34_x86_64.whl'
     )
 
 
