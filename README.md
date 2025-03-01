@@ -9,7 +9,7 @@ Ela é projetada para processar computação de números primos de maneira efici
 - [Instalação](#instalação)
   - [Instalação local](#instalação-local)
   - [Compilação do Rust (opcional)](#compilação-do-rust-opcional)
-- [Uso](#uso)
+- [Uso](#uso)  
   - [Executando o Servidor](#executando-o-servidor)
   - [Executando o Cliente](#executando-o-cliente)
 - [Desenvolvimento](#desenvolvimento)
@@ -30,6 +30,20 @@ Ela é projetada para processar computação de números primos de maneira efici
 ---
 
 ## Instalação
+
+### Instalação via GitHub
+
+Para instalar a biblioteca diretamente do repositório do GitHub, use:
+
+```sh
+pip install git+https://github.com/Joao-vpf/primesocket.git
+```
+
+Caso deseje instalar uma versão específica, substitua main pelo nome da tag ou branch:
+
+```sh
+pip install git+https://github.com/Joao-vpf/primesocket.git@v0.1.0
+```
 
 ### Instalação local
 
