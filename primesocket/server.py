@@ -15,7 +15,7 @@ class PrimeServer:  # pylint: disable=R0903
     def __init__(
         self,
         port: int = 9999,
-        end: int = 9999,
+        end: int = 100000,
         verbose: int = 0
     ):
         """
